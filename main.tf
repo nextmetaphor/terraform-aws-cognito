@@ -1,26 +1,6 @@
-resource "aws_iam_role" "clearance1_role" {
-  name = "clearance1_role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action: "sts:AssumeRole",
-        Principal: {
-          Federated: "cognito-identity.amazonaws.com"
-        },
-        Effect: "Allow",
-      },
-    ]
-  })
-
-  tags = {
-  }
-}
-
 // TODO needs to include the specific identity provider here
-resource "aws_iam_role" "clearance2_role" {
-  name = "clearance2_role-xyz"
+resource "aws_iam_role" "security_clearance_role" {
+  name = "security_clearance_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -39,70 +19,67 @@ resource "aws_iam_role" "clearance2_role" {
   }
 }
 
-resource "aws_s3_bucket" "c1_bucket" {
-  bucket = "c1-bucket-xyz"
+resource "aws_s3_bucket" "non_secured_bucket" {
+  bucket = "non-secured-bucket-xyz"
 }
 
-resource "aws_s3_bucket" "c2_bucket" {
-  bucket = "c2-bucket-xyz"
+resource "aws_s3_bucket" "security_clearance_bucket" {
+  bucket = "security-clearance-bucket-xyz"
 }
 
-resource "aws_s3_bucket_policy" "clearance2_bucket_policy" {
-  bucket = aws_s3_bucket.c2_bucket.id
+resource "aws_s3_bucket_policy" "security_clearance_bucket_policy" {
+  bucket = aws_s3_bucket.security_clearance_bucket.id
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Id = "clearance2_bucket_policy"
+    Id = "security_clearance_bucket_policy"
     Statement: [
       {
         Effect: "Deny",
         Principal: "*",
         Action: "s3:GetObject",
         Resource: [
-          aws_s3_bucket.c2_bucket.arn,
-          "${aws_s3_bucket.c2_bucket.arn}/*",
+          aws_s3_bucket.security_clearance_bucket.arn,
+          "${aws_s3_bucket.security_clearance_bucket.arn}/*",
         ],
         Condition: {
           "StringNotLike": {
             "aws:userId": [
-              "${aws_iam_role.clearance2_role.unique_id}:*",
-              aws_iam_role.clearance2_role.unique_id,
+              "${aws_iam_role.security_clearance_role.unique_id}:*",
+              aws_iam_role.security_clearance_role.unique_id,
             ]
           }
         }
-      }
-    ]
-  })
-}
-
-resource "aws_s3_bucket_policy" "clearance1_bucket_policy" {
-  bucket = aws_s3_bucket.c1_bucket.id
-
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Id = "MYBUCKETPOLICY"
-    Statement = [
+      },
       {
-        Sid = "IPAllow"
-        Effect = "Deny"
-        Principal = "*"
-        Action = "s3:GetObject"
-        Resource = [
-          aws_s3_bucket.c1_bucket.arn,
-          "${aws_s3_bucket.c1_bucket.arn}/*",
-        ]
-        Condition = {
-          IpAddress = {
-            "aws:SourceIp" = "8.8.8.8/32"
+        Effect: "Allow",
+        Principal: "*",
+        Action: "s3:*",
+        Resource: [
+          aws_s3_bucket.security_clearance_bucket.arn,
+          "${aws_s3_bucket.security_clearance_bucket.arn}/*",
+        ],
+        Condition: {
+          "StringLike": {
+            "aws:userId": [
+              "${aws_iam_role.security_clearance_role.unique_id}:*",
+              aws_iam_role.security_clearance_role.unique_id,
+            ]
           }
         }
       },
+
     ]
   })
 }
 
 resource aws_cognito_user_pool user_pool {
   name = "client-pool"
+
+  schema {
+    attribute_data_type = "String"
+    name = "clearance"
+  }
 }
 
 resource aws_cognito_user_pool_client user_pool_client {
@@ -144,15 +121,15 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
     ambiguous_role_resolution = "Deny"
 
     mapping_rule {
-      claim      = "clearance"
+      claim      = "custom:clearance"
       match_type = "Equals"
-      value      = "clearance1"
-      role_arn   = aws_iam_role.clearance1_role.arn
+      value      = "security-cleared"
+      role_arn   = aws_iam_role.security_clearance_role.arn
     }
   }
 
   roles = {
-    authenticated = aws_iam_role.clearance1_role.arn
+    authenticated = aws_iam_role.security_clearance_role.arn
   }
 }
 
