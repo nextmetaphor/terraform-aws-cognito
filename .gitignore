@@ -4,3 +4,4 @@
 tfplan
 .terraform
 .terraform.lock.hcl
+*.txt

@@ -6,7 +6,9 @@ resource "aws_iam_role" "security_clearance_role" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action: "sts:AssumeRoleWithWebIdentity",
+        Action: [
+          "sts:AssumeRoleWithWebIdentity",
+          "sts:TagSession"],
         Principal: {
           Federated: "cognito-identity.amazonaws.com"
         },
@@ -68,7 +70,67 @@ resource "aws_s3_bucket_policy" "security_clearance_bucket_policy" {
           }
         }
       },
+    ]
+  })
+}
 
+resource "aws_s3_bucket" "attribute_secured_bucket" {
+  bucket = "attribute-secured-bucket-xyz"
+
+  tags = {
+    clearance = "super-secure"
+  }
+}
+
+resource "aws_s3_bucket_policy" "attribute_secured_bucket_policy" {
+  bucket = aws_s3_bucket.attribute_secured_bucket.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Id = "attribute_secured_bucket_policy"
+    Statement: [
+      {
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:GetObject",
+        "Resource": [
+          aws_s3_bucket.attribute_secured_bucket.arn,
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+        ],
+        "Condition": {
+          "Null": {
+            "aws:PrincipalTag/clearance": "true"
+          }
+        }
+      },
+      {
+        Effect: "Deny",
+        Principal: "*",
+        Action: "s3:GetObject",
+        Resource: [
+          aws_s3_bucket.attribute_secured_bucket.arn,
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+        ],
+        Condition: {
+          "StringNotEquals": {
+            "s3:ExistingObjectTag/clearance":"$${aws:PrincipalTag/clearance}"
+          }
+        }
+      },
+      {
+        Effect: "Allow",
+        Principal: "*",
+        Action: "s3:*",
+        Resource: [
+          aws_s3_bucket.attribute_secured_bucket.arn,
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+        ],
+        Condition: {
+          "StringEquals": {
+            "s3:ExistingObjectTag/clearance": "$${aws:PrincipalTag/clearance}"
+          }
+        }
+      },
     ]
   })
 }
@@ -80,20 +142,35 @@ resource aws_cognito_user_pool user_pool {
     attribute_data_type = "String"
     name = "clearance"
   }
+
+  schema {
+    attribute_data_type = "String"
+    name = "department"
+  }
 }
 
 resource aws_cognito_user_pool_client user_pool_client {
   user_pool_id = aws_cognito_user_pool.user_pool.id
   name = "user_pool_client"
 
-  explicit_auth_flows = ["USER_PASSWORD_AUTH"]
+  explicit_auth_flows = [
+    "USER_PASSWORD_AUTH"]
   generate_secret = false
 
-  callback_urls = ["https://bbc.co.uk/news"]
-  logout_urls = ["https://google.com"]
-  allowed_oauth_flows = ["implicit"]
-  supported_identity_providers = ["COGNITO"]
-  allowed_oauth_scopes = ["phone", "email", "openid", "aws.cognito.signin.user.admin", "profile"]
+  callback_urls = [
+    "https://bbc.co.uk/news"]
+  logout_urls = [
+    "https://google.com"]
+  allowed_oauth_flows = [
+    "implicit"]
+  supported_identity_providers = [
+    "COGNITO"]
+  allowed_oauth_scopes = [
+    "phone",
+    "email",
+    "openid",
+    "aws.cognito.signin.user.admin",
+    "profile"]
   allowed_oauth_flows_user_pool_client = true
 }
 
@@ -116,15 +193,17 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
   identity_pool_id = aws_cognito_identity_pool.identity_pool.id
 
   role_mapping {
-    identity_provider         = join(":", [aws_cognito_user_pool.user_pool.endpoint, aws_cognito_user_pool_client.user_pool_client.id])
-    type                      = "Rules"
+    identity_provider = join(":", [
+      aws_cognito_user_pool.user_pool.endpoint,
+      aws_cognito_user_pool_client.user_pool_client.id])
+    type = "Rules"
     ambiguous_role_resolution = "Deny"
 
     mapping_rule {
-      claim      = "custom:clearance"
+      claim = "custom:clearance"
       match_type = "Equals"
-      value      = "security-cleared"
-      role_arn   = aws_iam_role.security_clearance_role.arn
+      value = "security-cleared"
+      role_arn = aws_iam_role.security_clearance_role.arn
     }
   }
 
@@ -132,4 +211,3 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
     authenticated = aws_iam_role.security_clearance_role.arn
   }
 }
-
