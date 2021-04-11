@@ -1,6 +1,6 @@
 // TODO needs to include the specific identity provider here
 resource "aws_iam_role" "security_clearance_role" {
-  name = "security_clearance_role"
+  name = "new-security_clearance_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -90,6 +90,7 @@ resource "aws_s3_bucket_policy" "attribute_secured_bucket_policy" {
     Id = "attribute_secured_bucket_policy"
     Statement: [
       {
+        // deny access to principals without clearance tag
         "Effect": "Deny",
         "Principal": "*",
         "Action": "s3:GetObject",
@@ -104,12 +105,29 @@ resource "aws_s3_bucket_policy" "attribute_secured_bucket_policy" {
         }
       },
       {
+        // deny access to principals without department tag
+        "Effect": "Deny",
+        "Principal": "*",
+        "Action": "s3:GetObject",
+        "Resource": [
+          aws_s3_bucket.attribute_secured_bucket.arn,
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+        ],
+        "Condition": {
+          "Null": {
+            "aws:PrincipalTag/department": "true"
+          }
+        }
+      },
+      // TODO - need to deny GetObject access outside of principal department
+      {
+        // deny GetObject access to departmental files without same clearance level as principal
         Effect: "Deny",
         Principal: "*",
         Action: "s3:GetObject",
         Resource: [
           aws_s3_bucket.attribute_secured_bucket.arn,
-          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/$${aws:PrincipalTag/department}/*",
         ],
         Condition: {
           "StringNotEquals": {
@@ -118,12 +136,13 @@ resource "aws_s3_bucket_policy" "attribute_secured_bucket_policy" {
         }
       },
       {
+        // explicitly allow GetObject access to departmental files with same clearance level as principal
         Effect: "Allow",
         Principal: "*",
         Action: "s3:*",
         Resource: [
           aws_s3_bucket.attribute_secured_bucket.arn,
-          "${aws_s3_bucket.attribute_secured_bucket.arn}/*",
+          "${aws_s3_bucket.attribute_secured_bucket.arn}/$${aws:PrincipalTag/department}/*",
         ],
         Condition: {
           "StringEquals": {
@@ -176,7 +195,7 @@ resource aws_cognito_user_pool_client user_pool_client {
 
 resource aws_cognito_user_pool_domain user_pool_domain {
   user_pool_id = aws_cognito_user_pool.user_pool.id
-  domain = "brand-new-test-domain"
+  domain = "new-brand-new-test-domain"
 }
 
 resource aws_cognito_identity_pool identity_pool {
