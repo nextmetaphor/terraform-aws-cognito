@@ -1,3 +1,24 @@
+resource "aws_iam_role" "empty_default_role" {
+  name = "empty_default_role"
+
+  assume_role_policy = jsonencode({
+    "Version": "2012-10-17",
+    "Statement": [
+      {
+        "Effect": "Allow",
+        "Principal": {
+          "Service": "ec2.amazonaws.com"
+        },
+        "Action": "sts:AssumeRole"
+      }
+    ]
+  })
+
+  tags = {
+  }
+}
+
+
 // TODO needs to include the specific identity provider here
 resource "aws_iam_role" "security_clearance_role" {
   name = "new-security_clearance_role"
@@ -221,12 +242,12 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
     mapping_rule {
       claim = "custom:clearance"
       match_type = "Equals"
-      value = "security-cleared"
+      value = "level1"
       role_arn = aws_iam_role.security_clearance_role.arn
     }
   }
 
   roles = {
-    authenticated = aws_iam_role.security_clearance_role.arn
+    authenticated = aws_iam_role.empty_default_role.arn
   }
 }
