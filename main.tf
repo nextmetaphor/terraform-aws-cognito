@@ -251,3 +251,17 @@ resource "aws_cognito_identity_pool_roles_attachment" "main" {
     authenticated = aws_iam_role.empty_default_role.arn
   }
 }
+
+resource "aws_cognito_identity_provider" "external_idp" {
+  user_pool_id = aws_cognito_user_pool.user_pool.id
+  provider_name = "externalIDP"
+  provider_type = "OIDC"
+
+  provider_details = {
+    authorize_scopes = "openid consumer"
+    attributes_request_method = "GET"
+    oidc_issuer = var.issuer_URL
+    client_id = var.idp_client_id
+    client_secret = var.idp_client_secret
+  }
+}

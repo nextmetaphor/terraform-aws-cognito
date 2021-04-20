@@ -12,8 +12,14 @@ terraform init
 ```bash
 # create stack
 terraform validate
-terraform plan -out=tfplan
-terraform apply tfplan
+
+export CLIENT_ID=
+export CLIENT_SECRET=
+export ISSUER_URL=
+
+terraform plan -out=tfplan -var idp_client_id=${CLIENT_ID} -var idp_client_secret=${CLIENT_SECRET} -var issuer_URL=${ISSUER_URL}
+
+terraform apply tfplan 
 
 # add s3 files
 aws s3 cp _sample_files/public.txt s3://non-secured-bucket-xyz
