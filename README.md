@@ -13,11 +13,21 @@ terraform init
 # create stack
 terraform validate
 
+# set environment variables accordingly
 export CLIENT_ID=
 export CLIENT_SECRET=
 export ISSUER_URL=
+export OID_PROVIDER_THUMBPRINT=
+export OID_PROVIDER_AUD_CLAIM=
+export OID_PROVIDER_ISS_CLAIM=
 
-terraform plan -out=tfplan -var idp_client_id=${CLIENT_ID} -var idp_client_secret=${CLIENT_SECRET} -var issuer_URL=${ISSUER_URL}
+terraform plan -out=tfplan \
+  -var idp_client_id=${CLIENT_ID} \
+  -var idp_client_secret=${CLIENT_SECRET} \
+  -var issuer_URL=${ISSUER_URL} \
+  -var oid_provider_iss_claim=${OID_PROVIDER_ISS_CLAIM} \
+  -var oid_provider_aud_claim=${OID_PROVIDER_AUD_CLAIM} \
+  -var oid_provider_thumbprint=${OID_PROVIDER_THUMBPRINT}
 
 terraform apply tfplan 
 

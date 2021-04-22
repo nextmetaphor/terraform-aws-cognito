@@ -265,3 +265,9 @@ resource "aws_cognito_identity_provider" "external_idp" {
     client_secret = var.idp_client_secret
   }
 }
+
+resource "aws_iam_openid_connect_provider" "oid_provider" {
+  client_id_list = [var.oid_provider_aud_claim]
+  thumbprint_list = [var.oid_provider_thumbprint]
+  url = var.oid_provider_iss_claim
+}
