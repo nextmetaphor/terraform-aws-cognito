@@ -230,6 +230,10 @@ resource aws_cognito_identity_pool identity_pool {
     client_id = aws_cognito_user_pool_client.user_pool_client.id
     provider_name = aws_cognito_user_pool.user_pool.endpoint
   }
+
+  openid_connect_provider_arns = [
+    aws_iam_openid_connect_provider.oid_provider.arn
+  ]
 }
 
 resource "aws_cognito_identity_pool_roles_attachment" "main" {
@@ -273,4 +277,17 @@ resource "aws_iam_openid_connect_provider" "oid_provider" {
   client_id_list = [var.oid_provider_aud_claim]
   thumbprint_list = [var.oid_provider_thumbprint]
   url = var.oid_provider_iss_claim
+}
+
+// attribute mapping seems unsupported as yet: https://github.com/hashicorp/terraform-provider-aws/issues/17345
+resource "null_resource" "principal_tag_attribute_map" {
+  provisioner "local-exec" {
+    command = <<EOT
+aws cognito-identity set-principal-tag-attribute-map \
+--identity-pool-id ${aws_cognito_identity_pool.identity_pool.id} \
+--identity-provider-name ${aws_iam_openid_connect_provider.oid_provider.arn} \
+--no-use-defaults \
+--principal-tags '{ "department": "department", "clearance": "clearance"}'
+EOT
+  }
 }
