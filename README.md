@@ -107,5 +107,11 @@ aws s3 rm s3://attribute-secured-bucket-xyz/department2/dept2-level1.txt
 aws s3 rm s3://attribute-secured-bucket-xyz/department2/dept2-level2.txt
 
 # remove stack
-terraform destroy -auto-approve
+terraform destroy -auto-approve \
+  -var idp_client_id=${CLIENT_ID} \
+  -var idp_client_secret=${CLIENT_SECRET} \
+  -var issuer_URL=${ISSUER_URL} \
+  -var oid_provider_iss_claim=${OID_PROVIDER_ISS_CLAIM} \
+  -var oid_provider_aud_claim=${OID_PROVIDER_AUD_CLAIM} \
+  -var oid_provider_thumbprint=${OID_PROVIDER_THUMBPRINT}
 ```
