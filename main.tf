@@ -2,14 +2,22 @@ resource "aws_iam_role" "empty_default_role" {
   name = "empty_default_role"
 
   assume_role_policy = jsonencode({
-    Version: "2012-10-17",
-    Statement: [
+    "Version": "2012-10-17",
+    "Statement": [
       {
-        Effect: "Allow",
-        Principal: {
-          Federated: "cognito-identity.amazonaws.com"
+        "Effect": "Allow",
+        "Principal": {
+          "Federated": "cognito-identity.amazonaws.com"
         },
-        Action: [
+        "Condition": {
+          "StringEquals": {
+            "cognito-identity.amazonaws.com:aud": "${aws_cognito_identity_pool.identity_pool.id}"
+          },
+          "ForAnyValue:StringLike": {
+            "cognito-identity.amazonaws.com:amr": "authenticated"
+          }
+        }
+        "Action": [
           "sts:AssumeRoleWithWebIdentity",
           "sts:TagSession",
         ]
@@ -27,17 +35,26 @@ resource "aws_iam_role" "security_clearance_role" {
   name = "new-security_clearance_role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
+    "Version": "2012-10-17",
+    "Statement": [
       {
-        Action: [
-          "sts:AssumeRoleWithWebIdentity",
-          "sts:TagSession"],
-        Principal: {
-          Federated: "cognito-identity.amazonaws.com"
+        "Effect": "Allow",
+        "Principal": {
+          "Federated": "cognito-identity.amazonaws.com"
         },
-        Effect: "Allow",
-      },
+        "Condition": {
+          "StringEquals": {
+            "cognito-identity.amazonaws.com:aud": "${aws_cognito_identity_pool.identity_pool.id}"
+          },
+          "ForAnyValue:StringLike": {
+            "cognito-identity.amazonaws.com:amr": "authenticated"
+          }
+        }
+        "Action": [
+          "sts:AssumeRoleWithWebIdentity",
+          "sts:TagSession",
+        ]
+      }
     ]
   })
 
